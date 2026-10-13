@@ -1,4 +1,5 @@
 import streamlit as st
+from deep_translator.exceptions import RequestError
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -585,10 +586,16 @@ if audio:
 
         if language!="en":
 
-            answer=translate_text(
-                answer,
-                language
-            )
+            try:
+                answer=translate_text(
+                    answer,
+                    language
+                )
+            except RequestError:
+                st.warning(
+                    "Translation is temporarily unavailable. "
+                    "Showing the answer in English."
+                )
 
 
 
