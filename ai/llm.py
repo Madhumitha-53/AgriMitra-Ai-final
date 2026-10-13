@@ -1,53 +1,26 @@
 import os
 
-from langchain_openai import ChatOpenAI
 from langchain_groq import ChatGroq
-from langchain_nvidia_ai_endpoints import ChatNVIDIA
 
 from ai.prompt import prompt
 
 
-
-nvidia = ChatNVIDIA(
-    api_key=os.getenv("NVIDIA_API_KEY"),
-    model="meta/llama-3.1-8b-instruct"
-)
-
-
-
-openai = ChatOpenAI(
-    api_key=os.getenv("OPENAI_API_KEY"),
-    model="gpt-4o-mini"
-)
-
-
-
+groq_api_key = os.getenv("GROQ_API_KEY")
 groq = ChatGroq(
-    api_key=os.getenv("GROQ_API_KEY"),
-    model="llama-3.1-8b-instant"
-)
-
-
-
-llm = nvidia.with_fallbacks(
-    [
-        openai,
-        groq
-    ]
-)
-
+    api_key=groq_api_key,
+    model=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+) if groq_api_key else None
 
 
 def get_response(question):
+    if not question or not question.strip():
+        return "Please ask a farming question."
 
-    chain = prompt | llm
+    if groq is None:
+        return "Groq API key is not configured. Please add GROQ_API_KEY to the environment."
 
-
-    response = chain.invoke(
-        {
-            "question":question
-        }
-    )
-
-
-    return response.content
+    try:
+        response = (prompt | groq).invoke({"question": question})
+        return response.content
+    except Exception as exc:  # pragma: no cover - handled by the chat UI
+        raise RuntimeError(f"AI model request failed: {exc}") from exc
